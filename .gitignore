@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# App runtime data (uploads + generated stems) — created at runtime by config.py
+data/
+
+# Node / test tooling
+node_modules/
+package.json
+package-lock.json
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/
+*.log

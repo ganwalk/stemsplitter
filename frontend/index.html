@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StemSplitter · Mesa de Separação</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%232b2f35'/%3E%3Crect x='6' y='8' width='3' height='16' rx='1.5' fill='%23ff8a3a'/%3E%3Crect x='12' y='5' width='3' height='22' rx='1.5' fill='%2358f08a'/%3E%3Crect x='18' y='11' width='3' height='10' rx='1.5' fill='%233a7de8'/%3E%3Crect x='24' y='7' width='3' height='18' rx='1.5' fill='%239b6ee8'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="/css/console.css" />
+</head>
+<body>
+  <!-- ambient studio backdrop -->
+  <div class="room"></div>
+
+  <main class="console" id="console">
+    <!-- corner screws -->
+    <span class="screw tl"></span><span class="screw tr"></span>
+    <span class="screw bl"></span><span class="screw br"></span>
+
+    <!-- ================= HEADER / BRANDING ================= -->
+    <header class="head">
+      <div class="brand">
+        <div class="logo-lamp" id="powerLamp"></div>
+        <div class="brand-text">
+          <h1>STEM<span>SPLITTER</span></h1>
+          <p class="tagline">Analog Separation Console — MK.5</p>
+        </div>
+      </div>
+      <div class="head-meters">
+        <div class="engine-badge" id="engineBadge" title="Motor de separação">
+          <span class="dot"></span><span id="engineName">…</span>
+        </div>
+        <div class="master-vu">
+          <canvas id="masterVu" width="220" height="40"></canvas>
+          <label>MASTER</label>
+        </div>
+      </div>
+    </header>
+
+    <!-- ================= LOAD / TAPE DECK ================= -->
+    <section class="deck" id="deck">
+      <div class="deck-reels">
+        <div class="reel" id="reelL"><div class="reel-hub"></div></div>
+        <div class="tape-window">
+          <div class="dropzone" id="dropzone">
+            <input type="file" id="fileInput" accept="audio/*,video/*" hidden />
+            <div class="dz-inner">
+              <div class="dz-icon">⏏</div>
+              <p class="dz-title" id="dzTitle">Arraste um áudio ou clique para carregar</p>
+              <p class="dz-sub" id="dzSub">qualquer formato — mp3 · wav · flac · m4a · ogg · vídeo…</p>
+            </div>
+          </div>
+        </div>
+        <div class="reel" id="reelR"><div class="reel-hub"></div></div>
+      </div>
+
+      <!-- transport / controls row -->
+      <div class="deck-controls">
+        <div class="ctl-group">
+          <label class="ctl-label">FAIXAS</label>
+          <div class="switch-bank" id="modeBank"></div>
+        </div>
+
+        <div class="ctl-group knob-group">
+          <label class="ctl-label">FORMATO</label>
+          <div class="knob" id="formatKnob" tabindex="0">
+            <div class="knob-dial"><span class="knob-pointer"></span></div>
+            <div class="knob-ticks" id="formatTicks"></div>
+          </div>
+          <div class="knob-readout" id="formatReadout">WAV</div>
+        </div>
+
+        <div class="ctl-group">
+          <label class="ctl-label">TRANSPORTE</label>
+          <button class="power-btn" id="startBtn" disabled>
+            <span class="power-ring"></span>
+            <span class="power-label">SEPARAR</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- progress strip -->
+      <div class="progress-strip" id="progressStrip">
+        <div class="prog-track"><div class="prog-fill" id="progFill"></div></div>
+        <div class="prog-text"><span id="progStage">Pronto</span><span id="progPct">0%</span></div>
+      </div>
+    </section>
+
+    <!-- ================= MIXER: CHANNEL STRIPS ================= -->
+    <section class="mixer" id="mixer">
+      <div class="mixer-rail"></div>
+      <div class="strips" id="strips">
+        <div class="empty-hint" id="emptyHint">
+          Carregue um áudio e pressione <b>SEPARAR</b> para montar a mesa.
+        </div>
+      </div>
+
+      <!-- master strip -->
+      <div class="strip master-strip" id="masterStrip" hidden>
+        <div class="strip-plate">MASTER</div>
+        <canvas class="strip-wave" width="60" height="46"></canvas>
+        <div class="vu-vert"><div class="vu-vert-fill" id="masterFill"></div></div>
+        <div class="fader-track">
+          <input type="range" class="fader" id="masterFader" min="0" max="100" value="85" orient="vertical" />
+        </div>
+        <div class="strip-transport">
+          <button class="tbtn play" id="playBtn" title="Play/Pause">▶</button>
+          <button class="tbtn stop" id="stopBtn" title="Stop">■</button>
+        </div>
+        <button class="dl-all" id="dlAllBtn" title="Baixar todas as faixas (.zip)">⤓ ZIP</button>
+      </div>
+    </section>
+
+    <footer class="foot">
+      <span class="foot-brand">StemSplitter</span>
+      <span class="foot-mid" id="footInfo">nenhuma sessão carregada</span>
+      <span class="foot-time" id="footTime">00:00 / 00:00</span>
+    </footer>
+  </main>
+
+  <script src="/js/app.js" type="module"></script>
+</body>
+</html>
