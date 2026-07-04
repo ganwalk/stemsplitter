@@ -1,15 +1,4 @@
-# Python
-__pycache__/
-*.py[cod]
-*.egg-info/
-.venv/
-venv/
-env/
-
-# App runtime data (uploads + generated stems) — created at runtime by config.py
-data/
-
-# Node / test tooling
+# Node / test tooling (used only for local Playwright smoke tests, not shipped)
 node_modules/
 package.json
 package-lock.json

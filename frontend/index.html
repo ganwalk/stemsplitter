@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>StemSplitter · Mesa de Separação</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%232b2f35'/%3E%3Crect x='6' y='8' width='3' height='16' rx='1.5' fill='%23ff8a3a'/%3E%3Crect x='12' y='5' width='3' height='22' rx='1.5' fill='%2358f08a'/%3E%3Crect x='18' y='11' width='3' height='10' rx='1.5' fill='%233a7de8'/%3E%3Crect x='24' y='7' width='3' height='18' rx='1.5' fill='%239b6ee8'/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="/css/console.css" />
+  <link rel="stylesheet" href="./css/console.css" />
 </head>
 <body>
   <!-- ambient studio backdrop -->
@@ -26,8 +26,8 @@
         </div>
       </div>
       <div class="head-meters">
-        <div class="engine-badge" id="engineBadge" title="Motor de separação">
-          <span class="dot"></span><span id="engineName">…</span>
+        <div class="engine-badge" id="engineBadge" title="Separação roda inteiramente no seu navegador — nenhum áudio sai do seu computador">
+          <span class="dot"></span><span id="engineName">DSP · NO NAVEGADOR</span>
         </div>
         <div class="master-vu">
           <canvas id="masterVu" width="220" height="40"></canvas>
@@ -46,7 +46,7 @@
             <div class="dz-inner">
               <div class="dz-icon">⏏</div>
               <p class="dz-title" id="dzTitle">Arraste um áudio ou clique para carregar</p>
-              <p class="dz-sub" id="dzSub">qualquer formato — mp3 · wav · flac · m4a · ogg · vídeo…</p>
+              <p class="dz-sub" id="dzSub">mp3 · wav · flac · m4a/aac · ogg — conforme suportado pelo seu navegador</p>
             </div>
           </div>
         </div>
@@ -58,15 +58,6 @@
         <div class="ctl-group">
           <label class="ctl-label">FAIXAS</label>
           <div class="switch-bank" id="modeBank"></div>
-        </div>
-
-        <div class="ctl-group knob-group">
-          <label class="ctl-label">FORMATO</label>
-          <div class="knob" id="formatKnob" tabindex="0">
-            <div class="knob-dial"><span class="knob-pointer"></span></div>
-            <div class="knob-ticks" id="formatTicks"></div>
-          </div>
-          <div class="knob-readout" id="formatReadout">WAV</div>
         </div>
 
         <div class="ctl-group">
@@ -117,6 +108,6 @@
     </footer>
   </main>
 
-  <script src="/js/app.js" type="module"></script>
+  <script src="./js/app.js" type="module"></script>
 </body>
 </html>
