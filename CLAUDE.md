@@ -82,6 +82,14 @@ uvicorn backend.main:app --reload --port 8000
 # or: ./run.sh
 ```
 
+End users don't need any of the above: `Iniciar-StemSplitter.bat` (Windows,
+double-click) and `iniciar-stemsplitter.sh` (Mac/Linux) are one-click
+installers — on first run they create `venv/`, install `requirements.txt`
+(optionally Demucs after a prompt), then exec `launcher.py`, which picks a
+free port (8000–8019), starts uvicorn, and opens the browser automatically.
+Subsequent runs skip installation. Keep those three files in sync if the
+run/setup story changes.
+
 Without `demucs`+`torch` the app runs on the built-in DSP **preview** engine — the
 full pipeline, console, playback and downloads all work; stem quality is lower and
 the header badge shows `PREVIEW · DSP` (amber) instead of `DEMUCS · STUDIO` (green).

@@ -21,7 +21,27 @@ download individual ou em `.zip`.
 - 🔊 **Mixer ao vivo** via Web Audio API: solo, mute, nível por faixa, transporte play/stop.
 - ⬇️ **Exportação** de cada faixa (wav/flac/mp3) ou de todas em um `.zip`.
 
-## 🚀 Como rodar
+## 🚀 Instalação em 1 clique
+
+Só precisa ter o [Python](https://www.python.org/downloads/) instalado (no Windows,
+marque **"Add Python to PATH"** durante a instalação dele).
+
+Depois de baixar este projeto ([ZIP aqui](https://github.com/ganwalk/stemsplitter/archive/refs/heads/main.zip)
+→ extraia a pasta), é um clique:
+
+| Sistema | Faça isso |
+|---|---|
+| **Windows** | Dê **duplo clique** em `Iniciar-StemSplitter.bat` |
+| **Mac / Linux** | Rode `./iniciar-stemsplitter.sh` no terminal (uma vez: `chmod +x iniciar-stemsplitter.sh`) |
+
+Na **primeira execução** ele instala tudo sozinho (e pergunta se você quer a
+qualidade de estúdio Demucs, ~2 GB — pode dizer não e instalar depois). Nas
+seguintes, ele só liga o servidor. **O navegador abre sozinho** na mesa de mixagem.
+
+Para encerrar: `Ctrl+C` (ou feche a janela do terminal).
+
+<details>
+<summary>Prefere instalar manualmente? (clique para expandir)</summary>
 
 ```bash
 pip install -r requirements.txt
@@ -33,8 +53,11 @@ uvicorn backend.main:app --port 8000
 # ou: ./run.sh
 ```
 
-Abra **http://localhost:8000**, arraste um áudio, escolha o número de faixas e o
-formato de saída, e pressione **SEPARAR**.
+Abra **http://localhost:8000**.
+</details>
+
+Na mesa: arraste um áudio, escolha o número de faixas e o formato de saída, e
+pressione **SEPARAR**.
 
 > Sem `demucs`+`torch`, o app roda no motor **DSP de prévia** embutido: todo o fluxo,
 > a mesa, a reprodução e os downloads funcionam — a qualidade da separação é menor e o
