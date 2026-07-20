@@ -8,6 +8,11 @@ on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag da release (ex.: v1.0.0)"
+        required: true
+        default: "v1.0.0"
 
 permissions:
   contents: write
@@ -86,7 +91,9 @@ jobs:
           path: StemSplitter-${{ matrix.label }}.zip
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    # Runs for v* tag pushes AND manual dispatches (which pass the tag as an
+    # input; the release action then creates that tag at this commit).
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -96,6 +103,7 @@ jobs:
 
       - uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
           files: StemSplitter-*.zip
           body: |
             ## StemSplitter — instalação sem depender de nada
