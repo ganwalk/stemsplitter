@@ -39,6 +39,11 @@ def open_browser_when_ready(port: int) -> None:
 
 
 if __name__ == "__main__":
+    # Import the app object directly (not as an "module:attr" string): inside a
+    # PyInstaller bundle this is the reliable way to load it, and it works the
+    # same when running from source.
+    from backend.main import app
+
     port = free_port()
     print()
     print("  ============================================")
@@ -48,4 +53,4 @@ if __name__ == "__main__":
     print("  ============================================")
     print()
     threading.Thread(target=open_browser_when_ready, args=(port,), daemon=True).start()
-    uvicorn.run("backend.main:app", host="127.0.0.1", port=port, log_level="warning")
+    uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")

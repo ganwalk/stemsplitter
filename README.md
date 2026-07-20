@@ -21,24 +21,43 @@ download individual ou em `.zip`.
 - 🔊 **Mixer ao vivo** via Web Audio API: solo, mute, nível por faixa, transporte play/stop.
 - ⬇️ **Exportação** de cada faixa (wav/flac/mp3) ou de todas em um `.zip`.
 
-## 🚀 Instalação em 1 clique
+## 🚀 Instalação — baixe e use (não precisa de Python nem de nada)
 
-Só precisa ter o [Python](https://www.python.org/downloads/) instalado (no Windows,
-marque **"Add Python to PATH"** durante a instalação dele).
+Vá na página de **[Releases](https://github.com/ganwalk/stemsplitter/releases/latest)**,
+baixe o arquivo do seu sistema, extraia o ZIP e dê **dois cliques** no
+`StemSplitter` (`StemSplitter.exe` no Windows). O navegador abre sozinho na
+mesa de mixagem. Só isso.
 
-Depois de baixar este projeto ([ZIP aqui](https://github.com/ganwalk/stemsplitter/archive/refs/heads/main.zip)
-→ extraia a pasta), é um clique:
+| Sistema | Arquivo |
+|---|---|
+| **Windows** | `StemSplitter-Windows.zip` |
+| **macOS** | `StemSplitter-macOS.zip` |
+| **Linux** | `StemSplitter-Linux.zip` |
+
+> **Windows**: se o SmartScreen avisar "aplicativo não reconhecido", clique em
+> *Mais informações → Executar assim mesmo* (o executável é de código aberto,
+> só não tem assinatura digital paga). **macOS**: primeira vez, botão direito → *Abrir*.
+
+Para encerrar: feche a janela do terminal (ou `Ctrl+C`).
+
+O executável usa o motor de prévia (DSP). Quer **qualidade de estúdio**
+(Demucs, rede neural)? Use a instalação via Python abaixo. 👇
+
+## 🐍 Instalação via Python (desbloqueia a qualidade de estúdio)
+
+Precisa do [Python](https://www.python.org/downloads/) instalado (no Windows,
+marque **"Add Python to PATH"**). Baixe o projeto
+([ZIP aqui](https://github.com/ganwalk/stemsplitter/archive/refs/heads/main.zip)
+→ extraia a pasta) e:
 
 | Sistema | Faça isso |
 |---|---|
 | **Windows** | Dê **duplo clique** em `Iniciar-StemSplitter.bat` |
 | **Mac / Linux** | Rode `./iniciar-stemsplitter.sh` no terminal (uma vez: `chmod +x iniciar-stemsplitter.sh`) |
 
-Na **primeira execução** ele instala tudo sozinho (e pergunta se você quer a
-qualidade de estúdio Demucs, ~2 GB — pode dizer não e instalar depois). Nas
-seguintes, ele só liga o servidor. **O navegador abre sozinho** na mesa de mixagem.
-
-Para encerrar: `Ctrl+C` (ou feche a janela do terminal).
+Na **primeira execução** ele instala tudo sozinho e pergunta se você quer a
+qualidade de estúdio Demucs (~2 GB). Nas seguintes, ele só liga o servidor e
+abre o navegador.
 
 <details>
 <summary>Prefere instalar manualmente? (clique para expandir)</summary>

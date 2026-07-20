@@ -1,0 +1,34 @@
+====================================================
+ StemSplitter - Mesa de Separacao de Instrumentos
+====================================================
+
+COMO USAR (nao precisa instalar nada):
+
+  1. De dois cliques no arquivo "StemSplitter"
+     (no Windows: "StemSplitter.exe")
+  2. Uma janela de terminal abre e, em instantes,
+     o navegador abre sozinho na mesa de mixagem.
+  3. Arraste uma musica, escolha o numero de faixas
+     e clique em SEPARAR.
+  4. Para encerrar, feche a janela do terminal
+     (ou pressione Ctrl+C nela).
+
+AVISOS DE SEGURANCA DO SISTEMA:
+
+  * Windows: se aparecer "O Windows protegeu o seu
+    computador" (SmartScreen), clique em
+    "Mais informacoes" e depois "Executar assim mesmo".
+    Isso acontece porque o programa nao tem assinatura
+    digital paga - ele e seguro e de codigo aberto.
+
+  * macOS: na primeira vez, clique com o botao direito
+    no app e escolha "Abrir".
+
+QUALIDADE:
+
+  Esta versao usa o motor de previa (DSP). Para
+  qualidade de estudio com rede neural (Demucs),
+  veja as instrucoes no site do projeto:
+  https://github.com/ganwalk/stemsplitter
+
+====================================================

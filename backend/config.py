@@ -5,12 +5,20 @@ All tunables live here so the rest of the code stays declarative.
 from __future__ import annotations
 
 import os
+import sys
+import tempfile
 from pathlib import Path
 
 # --- Paths -----------------------------------------------------------------
+# In a PyInstaller bundle, __file__ lives inside the unpacked bundle dir, so
+# FRONTEND_DIR (bundled as data) still resolves correctly relative to it —
+# but that dir is read-only/ephemeral, so job data must go to the system
+# temp dir instead of BASE_DIR/data.
 BASE_DIR = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = BASE_DIR / "frontend"
-DATA_DIR = Path(os.environ.get("STEMSPLITTER_DATA", BASE_DIR / "data"))
+_FROZEN = getattr(sys, "frozen", False)
+_DEFAULT_DATA = (Path(tempfile.gettempdir()) / "stemsplitter-data") if _FROZEN else (BASE_DIR / "data")
+DATA_DIR = Path(os.environ.get("STEMSPLITTER_DATA", _DEFAULT_DATA))
 UPLOAD_DIR = DATA_DIR / "uploads"
 OUTPUT_DIR = DATA_DIR / "outputs"
 

@@ -90,6 +90,19 @@ free port (8000–8019), starts uvicorn, and opens the browser automatically.
 Subsequent runs skip installation. Keep those three files in sync if the
 run/setup story changes.
 
+**Standalone executables (no Python at all)**:
+`.github/workflows/build-installers.yml` builds PyInstaller one-file
+executables for Windows/macOS/Linux (bundling the frontend, the
+imageio-ffmpeg binary, and libsndfile) and attaches them to a GitHub
+Release on every `v*` tag push. These ship the DSP preview engine only —
+bundling torch/Demucs is deliberately out of scope for the exe (size and
+PyInstaller fragility); studio quality remains the pip route.
+`launcher.py` imports the FastAPI app object directly (not a
+"module:attr" string) and `backend/config.py` redirects `DATA_DIR` to the
+system temp dir when frozen — both required for PyInstaller; don't undo
+them. Each build is smoke-tested in CI (health endpoint over HTTP) before
+being released.
+
 Without `demucs`+`torch` the app runs on the built-in DSP **preview** engine — the
 full pipeline, console, playback and downloads all work; stem quality is lower and
 the header badge shows `PREVIEW · DSP` (amber) instead of `DEMUCS · STUDIO` (green).
