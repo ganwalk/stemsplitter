@@ -1,14 +1,7 @@
 /* ============================================================
-   StemSplitter — console logic (100% client-side)
-   Decode (Web Audio API) → separate (dsp.js, in-browser) → live
-   multitrack mixer (Web Audio API) → download (wav.js / zip.js).
-   No server involved: everything below runs entirely in the tab.
+   StemSplitter — console logic
+   Upload → separate (polled job) → live multitrack mixer (Web Audio API)
    ============================================================ */
-
-import { STEM_MODES, STEM_META, DEFAULT_STEM_MODE, MAX_UPLOAD_BYTES } from "./config.js";
-import { separate, peakWaveform } from "./dsp.js";
-import { encodeWav } from "./wav.js";
-import { makeZip } from "./zip.js";
 
 const $ = (sel) => document.querySelector(sel);
 const el = (tag, cls) => { const n = document.createElement(tag); if (cls) n.className = cls; return n; };
@@ -16,13 +9,18 @@ const el = (tag, cls) => { const n = document.createElement(tag); if (cls) n.cla
 const ICONS = { mic: "🎤", drum: "🥁", bass: "🎸", guitar: "🎸", piano: "🎹", wave: "〰️" };
 
 const state = {
+  cfg: null,
   file: null,
-  mode: DEFAULT_STEM_MODE,
+  mode: null,
+  format: "wav",
+  formatKeys: [],
+  job: null,
+  poll: null,
   // audio
   ctx: null,
   master: null,
   masterAnalyser: null,
-  tracks: [],        // {channel, meta, bandData:{L,R}, sampleRate, buffer, gain, analyser, muted, solo, faderEl, vuEl, stripEl}
+  tracks: [],        // {channel, gain, analyser, buffer, source, muted, solo, faderEl, vuEl, waveCanvas, meta}
   playing: false,
   startedAt: 0,
   offset: 0,
@@ -32,26 +30,74 @@ const state = {
 /* ============================================================
    BOOT
    ============================================================ */
-function boot() {
-  renderModeBank(state.mode);
+async function boot() {
+  const cfg = await (await fetch("/api/config")).json();
+  state.cfg = cfg;
+  state.mode = cfg.default_mode;
+  state.format = cfg.default_format;
+  state.formatKeys = Object.keys(cfg.output_formats);
+
+  renderEngine(cfg.engine);
+  renderModeBank(cfg.modes, cfg.default_mode);
+  renderFormatKnob(cfg.output_formats, cfg.default_format);
   wireDropzone();
   wireTransport();
   drawMasterVu(); // idle animation
 }
 
-function renderModeBank(active) {
+function renderEngine(engine) {
+  const badge = $("#engineBadge");
+  $("#engineName").textContent = engine.name === "demucs" ? "DEMUCS · STUDIO" : "PREVIEW · DSP";
+  badge.classList.toggle("preview", engine.quality !== "studio");
+  badge.title = engine.quality === "studio"
+    ? "Motor neural Demucs — qualidade de estúdio"
+    : "Motor DSP embutido — qualidade de prévia (instale demucs+torch para estúdio)";
+}
+
+function renderModeBank(modes, active) {
   const bank = $("#modeBank");
   bank.innerHTML = "";
-  Object.entries(STEM_MODES).forEach(([key, m]) => {
+  Object.entries(modes).forEach(([key, m]) => {
     const b = el("button", "mode-btn");
     if (key === active) b.classList.add("active");
-    b.innerHTML = `${m.channels.length}<small>${m.label}</small>`;
+    b.innerHTML = `${m.count}<small>${m.label}</small>`;
     b.onclick = () => {
       state.mode = key;
       [...bank.children].forEach((c) => c.classList.remove("active"));
       b.classList.add("active");
     };
     bank.appendChild(b);
+  });
+}
+
+function renderFormatKnob(formats, active) {
+  const keys = Object.keys(formats);
+  const ticks = $("#formatTicks");
+  ticks.innerHTML = "";
+  keys.forEach((_, i) => {
+    const t = el("span");
+    const ang = -135 + (270 / (keys.length - 1)) * i;
+    t.style.transform = `translate(-50%,-50%) rotate(${ang}deg)`;
+    ticks.appendChild(t);
+  });
+  const knob = $("#formatKnob");
+  const setFormat = (idx) => {
+    idx = Math.max(0, Math.min(keys.length - 1, idx));
+    state.format = keys[idx];
+    const ang = -135 + (270 / (keys.length - 1)) * idx;
+    knob.querySelector(".knob-dial").style.transform = `rotate(${ang}deg)`;
+    $("#formatReadout").textContent = keys[idx].toUpperCase();
+  };
+  setFormat(keys.indexOf(active));
+  let idx = keys.indexOf(active);
+  knob.addEventListener("click", () => { idx = (idx + 1) % keys.length; setFormat(idx); });
+  knob.addEventListener("wheel", (e) => {
+    e.preventDefault(); idx += e.deltaY > 0 ? 1 : -1;
+    idx = (idx + keys.length) % keys.length; setFormat(idx);
+  }, { passive: false });
+  knob.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowUp" || e.key === "ArrowRight") { idx = (idx + 1) % keys.length; setFormat(idx); }
+    if (e.key === "ArrowDown" || e.key === "ArrowLeft") { idx = (idx - 1 + keys.length) % keys.length; setFormat(idx); }
   });
 }
 
@@ -74,8 +120,9 @@ function wireDropzone() {
 }
 
 function loadFile(file) {
-  if (file.size > MAX_UPLOAD_BYTES) {
-    return flashDeck(`Arquivo muito grande (máx ${(MAX_UPLOAD_BYTES / 1048576) | 0} MB)`, true);
+  const max = state.cfg.max_bytes;
+  if (file.size > max) {
+    return flashDeck(`Arquivo muito grande (máx ${(max / 1048576) | 0} MB)`, true);
   }
   state.file = file;
   const dz = $("#dropzone");
@@ -93,13 +140,13 @@ function flashDeck(msg, err) {
 }
 
 /* ============================================================
-   SEPARATION (entirely in-browser)
+   SEPARATION JOB
    ============================================================ */
 function wireTransport() {
   $("#startBtn").onclick = startSeparation;
   $("#playBtn").onclick = togglePlay;
   $("#stopBtn").onclick = stopPlayback;
-  $("#dlAllBtn").onclick = downloadAllZip;
+  $("#dlAllBtn").onclick = () => state.job && (location.href = `/api/jobs/${state.job.id}/download`);
   $("#masterFader").oninput = (e) => {
     if (state.master) state.master.gain.value = (e.target.value / 100) ** 1.5;
   };
@@ -112,33 +159,38 @@ async function startSeparation() {
   btn.disabled = true; btn.classList.add("busy");
   $("#reelL").classList.add("spin"); $("#reelR").classList.add("spin");
   $("#progFill").classList.remove("err");
-  setProgress(0.02, "Decodificando áudio…");
+  setProgress(0.01, "Enviando…");
 
-  const AudioCtx = window.AudioContext || window.webkitAudioContext;
-  state.ctx = new AudioCtx();
+  const fd = new FormData();
+  fd.append("file", state.file);
+  fd.append("mode", state.mode);
+  fd.append("out_format", state.format);
 
-  let audioBuffer;
+  let res;
   try {
-    const arrayBuf = await state.file.arrayBuffer();
-    audioBuffer = await state.ctx.decodeAudioData(arrayBuf);
+    res = await fetch("/api/separate", { method: "POST", body: fd });
   } catch (e) {
-    return failJob("Não foi possível decodificar este arquivo. Formatos suportados dependem do navegador (mp3, wav, ogg, m4a/aac, flac costumam funcionar).");
+    return failJob("Falha de rede ao enviar.");
   }
-
-  let bands;
-  try {
-    bands = await separate(audioBuffer, state.mode, (p, label) => setProgress(0.05 + 0.8 * p, label));
-  } catch (e) {
-    return failJob(`Falha ao separar: ${e.message}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "erro" }));
+    return failJob(err.detail || "Falha ao iniciar.");
   }
+  state.job = await res.json();
+  pollJob();
+}
 
-  setProgress(0.92, "Montando a mesa…");
-  await buildMixer(audioBuffer.sampleRate, bands);
-
-  setProgress(1, "Concluído");
-  btn.classList.remove("busy"); btn.disabled = false;
-  $("#reelL").classList.remove("spin"); $("#reelR").classList.remove("spin");
-  $("#footInfo").textContent = `${state.file.name} — ${state.tracks.length} faixas · DSP local`;
+function pollJob() {
+  clearInterval(state.poll);
+  state.poll = setInterval(async () => {
+    const r = await fetch(`/api/jobs/${state.job.id}`);
+    if (!r.ok) return;
+    const job = await r.json();
+    state.job = job;
+    setProgress(job.progress, job.stage);
+    if (job.status === "done") { clearInterval(state.poll); finishJob(job); }
+    if (job.status === "error") { clearInterval(state.poll); failJob(job.error || "Erro na separação."); }
+  }, 500);
 }
 
 function setProgress(p, stage) {
@@ -148,6 +200,7 @@ function setProgress(p, stage) {
 }
 
 function failJob(msg) {
+  clearInterval(state.poll);
   const btn = $("#startBtn");
   btn.classList.remove("busy"); btn.disabled = false;
   $("#reelL").classList.remove("spin"); $("#reelR").classList.remove("spin");
@@ -155,14 +208,24 @@ function failJob(msg) {
   $("#progStage").textContent = `⚠ ${msg}`;
 }
 
+async function finishJob(job) {
+  const btn = $("#startBtn");
+  btn.classList.remove("busy"); btn.disabled = false;
+  $("#reelL").classList.remove("spin"); $("#reelR").classList.remove("spin");
+  $("#footInfo").textContent = `${job.source_name} — ${job.stems.length} faixas · ${job.engine}`;
+  await buildMixer(job);
+}
+
 /* ============================================================
    MIXER (Web Audio)
    ============================================================ */
-async function buildMixer(sampleRate, bands) {
+async function buildMixer(job) {
   const strips = $("#strips");
   strips.innerHTML = "";
   state.tracks = [];
 
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  state.ctx = new AudioCtx();
   state.master = state.ctx.createGain();
   state.master.gain.value = ($("#masterFader").value / 100) ** 1.5;
   state.masterAnalyser = state.ctx.createAnalyser();
@@ -170,28 +233,27 @@ async function buildMixer(sampleRate, bands) {
   state.master.connect(state.masterAnalyser);
   state.masterAnalyser.connect(state.ctx.destination);
 
-  const spec = STEM_MODES[state.mode];
-  for (const { key } of spec.channels) {
-    const stereo = bands[key];
-    if (!stereo) continue;
-    const track = buildStrip(key, stereo, sampleRate);
+  for (const s of job.stems) {
+    const track = buildStrip(s);
     strips.appendChild(track.stripEl);
     state.tracks.push(track);
   }
 
   $("#masterStrip").hidden = false;
+  // decode buffers in parallel
+  await Promise.all(state.tracks.map((t) => loadBuffer(t)));
   applyRouting();
   animate();
 }
 
-function buildStrip(channel, stereo, sampleRate) {
-  const meta = STEM_META[channel] || { label: channel, icon: "wave", accent: "#888" };
+function buildStrip(stem) {
+  const meta = stem.meta || {};
   const accent = meta.accent || "#888";
   const strip = el("div", "strip");
   strip.style.setProperty("--accent", accent);
 
   const plate = el("div", "strip-plate");
-  plate.textContent = meta.label || channel;
+  plate.textContent = meta.label || stem.channel;
   const icon = el("div", "strip-icon");
   icon.textContent = ICONS[meta.icon] || "〰️";
 
@@ -199,8 +261,8 @@ function buildStrip(channel, stereo, sampleRate) {
   wave.width = 120; wave.height = 46;
 
   const vu = el("div", "vu-vert");
-  const vuFill = el("div", "vu-vert-fill");
-  vuFill.style.background = `linear-gradient(0deg, ${accent} 0%, #58f08a 60%, #ffb43a 82%, #ff5a4d 100%)`;
+  const vuFill = el("div", "vu-vert-fill"); vuFill.style.background =
+    `linear-gradient(0deg, ${accent} 0%, #58f08a 60%, #ffb43a 82%, #ff5a4d 100%)`;
   vu.appendChild(vuFill);
 
   const faderWrap = el("div", "fader-track");
@@ -217,74 +279,41 @@ function buildStrip(channel, stereo, sampleRate) {
 
   const dl = el("button", "strip-dl");
   dl.textContent = "⤓ BAIXAR";
+  dl.onclick = () => (location.href = stem.download);
 
   strip.append(plate, icon, wave, vu, faderWrap, btns, dl);
 
   const track = {
-    channel, meta, bandData: stereo, sampleRate,
-    gain: null, analyser: null, buffer: null, source: null, wavBlob: null,
+    channel: stem.channel, meta, url: stem.url, waveform: stem.waveform,
+    gain: null, analyser: null, buffer: null, source: null,
     muted: false, solo: false, faderEl: fader, vuEl: vuFill, waveCanvas: wave,
     stripEl: strip,
   };
 
-  fader.oninput = () => applyRouting();
+  fader.oninput = () => { setTrackGain(track); };
   muteBtn.onclick = () => { track.muted = !track.muted; muteBtn.classList.toggle("on", track.muted); applyRouting(); };
   soloBtn.onclick = () => { track.solo = !track.solo; soloBtn.classList.toggle("on", track.solo); applyRouting(); };
-  dl.onclick = async () => {
-    dl.textContent = "…";
-    const blob = await stemBlob(track);
-    triggerDownload(blob, `${meta.label || channel}.wav`);
-    dl.textContent = "⤓ BAIXAR";
-  };
 
-  drawWaveform(wave, peakWaveform(stereo), accent);
+  drawWaveform(wave, stem.waveform, accent);
+  return track;
+}
 
-  track.buffer = makeAudioBuffer(state.ctx, stereo, sampleRate);
+async function loadBuffer(track) {
+  const arr = await (await fetch(track.url)).arrayBuffer();
+  track.buffer = await state.ctx.decodeAudioData(arr);
   track.gain = state.ctx.createGain();
   track.analyser = state.ctx.createAnalyser();
   track.analyser.fftSize = 256;
   track.gain.connect(track.analyser);
   track.analyser.connect(state.master);
-
-  return track;
+  setTrackGain(track);
 }
 
-function makeAudioBuffer(ctx, { L, R }, sampleRate) {
-  const buf = ctx.createBuffer(2, L.length, sampleRate);
-  buf.copyToChannel(L, 0);
-  buf.copyToChannel(R, 1);
-  return buf;
-}
-
-async function stemBlob(track) {
-  if (!track.wavBlob) track.wavBlob = encodeWav(track.bandData, track.sampleRate);
-  return track.wavBlob;
-}
-
-function triggerDownload(blob, filename) {
-  const url = URL.createObjectURL(blob);
-  const a = el("a");
-  a.href = url; a.download = filename;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 4000);
-}
-
-async function downloadAllZip() {
-  if (!state.tracks.length) return;
-  const btn = $("#dlAllBtn");
-  const original = btn.textContent;
-  btn.textContent = "⤓ …"; btn.disabled = true;
-  try {
-    const entries = [];
-    for (const t of state.tracks) {
-      entries.push({ name: `${t.meta.label || t.channel}.wav`, blob: await stemBlob(t) });
-    }
-    const zip = await makeZip(entries);
-    const base = (state.file?.name || "audio").replace(/\.[^.]+$/, "");
-    triggerDownload(zip, `${base}_stems.zip`);
-  } finally {
-    btn.textContent = original; btn.disabled = false;
-  }
+function setTrackGain(track) {
+  if (!track.gain) return;
+  const v = (track.faderEl.value / 100) ** 1.5;
+  track.gain.gain.value = track.audible ? v : v; // base value; routing decides on/off
+  applyRouting();
 }
 
 function applyRouting() {
@@ -350,6 +379,7 @@ function maxDuration() {
 function animate() {
   cancelAnimationFrame(state.raf);
   const loop = () => {
+    // per-track VU
     state.tracks.forEach((t) => {
       if (!t.analyser) return;
       t.vuEl.style.height = `${rms(t.analyser) * 140}%`;
@@ -359,7 +389,7 @@ function animate() {
     if (state.playing) {
       const pos = state.offset + (state.ctx.currentTime - state.startedAt);
       const dur = maxDuration();
-      if (pos >= dur) stopPlayback();
+      if (pos >= dur) { stopPlayback(); }
       else updateTime(pos);
     }
     state.raf = requestAnimationFrame(loop);
@@ -384,6 +414,7 @@ function fmt(s) {
   return `${String((s / 60) | 0).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 }
 
+/* master VU (segmented bars on canvas) */
 function drawMasterVu() {
   const c = $("#masterVu"); const g = c.getContext("2d");
   g.clearRect(0, 0, c.width, c.height);
@@ -428,4 +459,4 @@ function teardownAudio() {
   $("#playBtn").classList.remove("on"); $("#playBtn").textContent = "▶";
 }
 
-boot();
+boot().catch((e) => console.error("boot failed", e));
